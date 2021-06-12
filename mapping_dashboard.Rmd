@@ -60,7 +60,7 @@ dy_events <- dy_events %>%
 ```
 
 ```{r export_updated}
-write_csv(dy_events, "data/complete_mapping_data_05_24.csv")
+#write_csv(dy_events, "data/complete_mapping_data_05_24.csv")
 ```
 
 
@@ -100,11 +100,11 @@ dy_locations <- dy_events %>%
 ```
 
 
-```{r map_locations_raw, out.width="768px",  out.height="605px"}
+```{r map_locations_raw, cache=TRUE, out.width="768px",  out.height="605px"}
 
 image_file <- "https://raw.githubusercontent.com/joostburgers/absalom_sentiment_analysis/master/images/dy_base_layer_4_2.png"
 
-fig_race_map <-
+fig_location_map <-
   plot_ly(
     dy_locations,
     x = ~ true_x,
@@ -112,7 +112,7 @@ fig_race_map <-
     name=~display_label
    
   )
-fig_race_map <- fig_race_map %>%
+fig_location_map <- fig_location_map %>%
   layout(
     title = "Locations in Yoknapatawpha",
     xaxis = list(
@@ -157,12 +157,12 @@ fig_race_map <- fig_race_map %>%
   )
 
 
-fig_race_map
+#fig_location_map
 
 ```
 
 
-```{r heatmap_gender}
+```{r heatmap_gender, cache=TRUE}
 dy_gender <- dy_events %>% 
                 group_by(gender) %>% 
                 add_count(locationid) %>% 
@@ -174,7 +174,7 @@ dy_gender <- dy_events %>%
 
 
 
-```{r plot_heatmap_gender}
+```{r plot_heatmap_gender, cache=TRUE}
 
 image_file <- "https://raw.githubusercontent.com/joostburgers/absalom_sentiment_analysis/master/images/dy_base_layer_4_2.png"
 
@@ -244,7 +244,196 @@ fig_race_map <- fig_race_map %>%
   )
 
 
-fig_race_map
+#fig_race_map
 
+```
+
+```{r absalom_movement}
+
+
+dy_absalom <- dy_events %>%
+  filter(sourcetextcode == "AA") %>%
+  filter(presentmentioned == "Present") %>%
+  filter(charactername %in% c("Thomas Sutpen", "Charles Bon", "Henry Sutpen", "Judith Sutpen")) %>%
+  mutate(year = as.numeric(str_sub(startdate, 1, 4))) %>%
+  group_by(year, charactername) %>%
+  add_count(locationid) %>%
+  select(year, charactername, n, display_label, true_x, true_y)  %>%
+  distinct() %>% 
+  ungroup() %>%
+  pivot_wider(names_from = charactername,
+              values_from = n,
+              values_fill = 0) %>%
+  pivot_longer(cols = 5:8, names_to = "charactername")
+```
+
+```{r}
+image_file <- "https://raw.githubusercontent.com/joostburgers/absalom_sentiment_analysis/master/images/dy_base_layer_4_2.png"
+
+fig_character_map <-
+  plot_ly(
+    dy_absalom,
+    x = ~ true_x,
+    y = ~ true_y,
+    name= ~ charactername,
+    frame = ~year,
+    color= ~charactername,
+     #colors = faulkner_colorway[c(1:4)],
+     type = 'scatter',
+     mode = 'markers',
+     size = ~value,
+     sizes = c(1, max(dy_absalom$value)*5),
+       hoverinfo='text',
+     text= ~paste('Count:', value,'<br>',display_label),
+       marker = list(
+         sizemode='diameter',
+                   opacity = .4,
+                   line = list(width = 1, color = 'white')
+        )
+  )
+fig_character_map <- fig_character_map %>%
+  layout(
+    title = "Locations in Yoknapatawpha",
+    xaxis = list(
+      title = "",
+      visible = FALSE,
+      fixedrange = TRUE,
+      range = c(0, 2008)
+    ),
+    yaxis = list(
+      title = "",
+      visible = FALSE,
+      fixedrange = TRUE,
+      range = c(-1660, 0)
+    ),
+    margin = m,
+    font = plot_font,
+    showlegend= TRUE,
+    legend = list(
+      title = list(text = "<b>Legend</b>"),
+      itemsizing = 'constant'
+    ),
+    
+    autosize = F,
+      width = 768,
+      height = 605,
+    
+    
+    images = list(
+      list(
+        source =  image_file,
+        xref = "x",
+        yref = "y",
+        x = 0,
+        y = -40,
+        sizex = 2008,
+        sizey = 1660,
+          sizing = "stretch",
+        opacity = 0.8,
+        layer = "below"
+      )
+      )
+  )
+fig_character_map <- fig_character_map %>%
+  animation_opts(
+    1000, easing = "linear", redraw = FALSE
+  )
+
+
+fig_character_map
+
+```
+
+
+
+```{r}
+
+dy_race <- dy_events %>%
+  #filter(sourcetextcode == "AA") %>%
+  filter(presentmentioned == "Present") %>%
+  #filter(charactername %in% c("Thomas Sutpen", "Charles Bon", "Henry Sutpen", "Judith Sutpen")) %>%
+  mutate(year = as.numeric(str_sub(startdate, 1, 4))) %>%
+  group_by(year, race_group) %>%
+  add_count(locationid) %>%
+  select(year, race_group, n, display_label, true_x, true_y)  %>%
+  distinct() %>% 
+  ungroup() 
+ # pivot_wider(names_from = race_group, values_from = n,           values_fill = 0) 
+#  pivot_longer(cols = 5:8, names_to = "race_group")
+```
+
+```{r}
+
+fig_race_map <-
+  plot_ly(
+    dy_race,
+    x = ~ true_x,
+    y = ~ true_y,
+    name= ~ race_group,
+    frame = ~year,
+    color= ~race_group,
+     #colors = faulkner_colorway[c(1:4)],
+     type = 'scatter',
+     mode = 'markers',
+     size = ~n,
+     sizes = c(1, max(dy_race$n)*5),
+       hoverinfo='text',
+     text= ~paste('Count:', n,'<br>',display_label),
+       marker = list(
+         sizemode='diameter',
+                   opacity = .4,
+                   line = list(width = 1, color = 'white')
+        )
+  )
+fig_race_map <- fig_race_map %>%
+  layout(
+    title = "Locations in Yoknapatawpha",
+    xaxis = list(
+      title = "",
+      visible = FALSE,
+      fixedrange = TRUE,
+      range = c(0, 2008)
+    ),
+    yaxis = list(
+      title = "",
+      visible = FALSE,
+      fixedrange = TRUE,
+      range = c(-1660, 0)
+    ),
+    margin = m,
+    font = plot_font,
+    showlegend= TRUE,
+    legend = list(
+      title = list(text = "<b>Legend</b>"),
+      itemsizing = 'constant'
+    ),
+    
+    autosize = F,
+      width = 768,
+      height = 605,
+    
+    
+    images = list(
+      list(
+        source =  image_file,
+        xref = "x",
+        yref = "y",
+        x = 0,
+        y = -40,
+        sizex = 2008,
+        sizey = 1660,
+          sizing = "stretch",
+        opacity = 0.8,
+        layer = "below"
+      )
+      )
+  )
+fig_racce_map <- fig_race_map %>%
+  animation_opts(
+    1000, easing = "linear", redraw = FALSE
+  )
+
+
+fig_race_map
 ```
 
